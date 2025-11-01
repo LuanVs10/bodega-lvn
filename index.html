@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bodega LVN</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0b0b0b"/>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo">🧾</div>
+        <div>
+          <h1>Bodega LVN</h1>
+          <small>Controle de vendas & fiados</small>
+        </div>
+      </div>
+      <button id="btnAddSale" class="btn primary">Nova Venda</button>
+    </header>
+
+    <main class="main-grid">
+      <section class="card summary">
+        <h2>Resumo</h2>
+        <div class="tiles">
+          <div class="tile">
+            <div class="tile-title">Vendas Hoje</div>
+            <div id="totalToday" class="tile-value">R$ 0,00</div>
+          </div>
+          <div class="tile">
+            <div class="tile-title">Fiado em Aberto</div>
+            <div id="totalFiado" class="tile-value">R$ 0,00</div>
+          </div>
+          <div class="tile">
+            <div class="tile-title">Vendas (últimos 30d)</div>
+            <div id="total30" class="tile-value">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button id="btnShowSales" class="btn">Histórico</button>
+          <button id="btnShowFiados" class="btn">Fiados</button>
+          <button id="btnExport" class="btn">Exportar CSV</button>
+        </div>
+      </section>
+
+      <section class="card form" id="formCard" hidden>
+        <h2 id="formTitle">Nova Venda</h2>
+        <form id="saleForm">
+          <label>Produto
+            <input type="text" id="inputProduct" required placeholder="Ex: Arroz 1kg" />
+          </label>
+          <label>Valor (R$)
+            <input type="number" step="0.01" id="inputValue" required placeholder="Ex: 10.50" />
+          </label>
+          <label>Quantidade
+            <input type="number" id="inputQty" value="1" min="1" required />
+          </label>
+          <label>
+            Cliente (opcional, para fiado)
+            <input type="text" id="inputClient" placeholder="Nome do cliente (opcional)" />
+          </label>
+
+          <div class="form-row">
+            <label class="radio"><input type="radio" name="payment" value="dinheiro" checked /> Dinheiro</label>
+            <label class="radio"><input type="radio" name="payment" value="cartao" /> Cartão</label>
+            <label class="radio"><input type="radio" name="payment" value="fiado" /> Fiado</label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Salvar Venda</button>
+            <button type="button" id="btnCancelForm" class="btn">Cancelar</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card list" id="listCard">
+        <h2 id="listTitle">Histórico de Vendas</h2>
+        <div id="listContent" class="list-content"></div>
+      </section>
+
+      <section class="card list" id="fiadoCard" hidden>
+        <h2>Clientes Fiados</h2>
+        <form id="fiadoForm" class="fiado-form">
+          <label>Cliente
+            <input type="text" id="fiadoClient" required placeholder="Nome do cliente" />
+          </label>
+          <label>Valor (R$)
+            <input type="number" id="fiadoValue" step="0.01" required />
+          </label>
+          <label>Data de pagamento prevista
+            <input type="date" id="fiadoDue" />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Registrar Fiado</button>
+          </div>
+        </form>
+        <div id="fiadoList" class="list-content"></div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <small>Feito para Bodega LVN • Offline | PWA</small>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
