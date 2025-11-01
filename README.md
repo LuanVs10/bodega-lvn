@@ -1,6 +1,6 @@
 # Bodega LVN
 
-![Logo Bodega LVN](https://via.placeholder.com/150x50?text=Bodega+LVN)
+
 
 ## Descrição
 
