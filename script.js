@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
       total,
       client: client || null,
       payment,
-      date: nowCearaISO(),
+      date: nowCearaISO(), // hora do Ceará
     };
 
     const sales = readSales();
@@ -143,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id: Date.now(),
         client: client || "Cliente sem nome",
         value: total,
-        date: nowCearaISO(),
+        date: nowCearaISO(), // hora do Ceará
         due: null,
         status: "pendente",
       });
@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sales.forEach((s) => {
       const div = document.createElement("div");
       div.className = "item";
-      if (s.pago) div.classList.add("pago");
+      if (s.pago) div.classList.add("pago"); // 💚 pinta verde se foi pago
       div.innerHTML = `
         <div>
           <div style="font-weight:600">${escapeHTML(s.product)} ×${s.qty} • ${escapeHTML(
@@ -231,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
       id: Date.now(),
       client,
       value,
-      date: nowCearaISO(),
+      date: nowCearaISO(), // hora do Ceará
       due,
       status: "pendente",
     });
@@ -271,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fiadoList.appendChild(div);
     });
 
-    // ✅ Marcar como pago
+    // ✅ Marcar como pago (sem duplicar)
     window.onMarkPaid = (id) => {
       if (!confirm("Marcar como pago?")) return;
 
@@ -279,32 +279,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const idx = fiados.findIndex((x) => x.id === id);
       if (idx === -1) return;
 
-      const pago = fiados[idx];
-      pago.status = "pago";
-      pago.paidAt = nowCearaISO();
+      // Apenas marca como pago
+      fiados[idx].status = "pago";
+      fiados[idx].paidAt = nowCearaISO(); // hora do Ceará
 
-      // Move para vendas com novo ID para evitar duplicidade
-      const sales = readSales();
-      sales.unshift({
-        id: Date.now(), // novo ID
-        product: "Venda fiado quitada",
-        qty: 1,
-        value: pago.value,
-        total: pago.value,
-        client: pago.client,
-        payment: "fiado pago",
-        date: pago.paidAt,
-        pago: true,
-      });
-      writeSales(sales);
-
-      // Remove dos fiados
-      fiados.splice(idx, 1);
       writeFiados(fiados);
 
       renderFiados();
       renderDashboard();
-      showSales();
     };
 
     window.onRemoveFiado = (id) => {
@@ -333,16 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ],
     ];
     sales.forEach((s) => {
-      rows.push([
-        s.id,
-        s.product,
-        s.value,
-        s.qty,
-        s.total,
-        s.client || "",
-        s.payment,
-        s.date,
-      ]);
+      rows.push([s.id, s.product, s.value, s.qty, s.total, s.client || "", s.payment, s.date]);
     });
     const csv = rows
       .map((r) =>
@@ -373,9 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <h2>Bodega LVN</h2>
       <div class="meta">Venda: ${s.id} • ${formatDateCeara(s.date)}</div>
       <hr/>
-      <div class="line"><div>${escapeHTML(
-        s.product
-      )} x${s.qty}</div><div>${money(s.total)}</div></div>
+      <div class="line"><div>${escapeHTML(s.product)} x${s.qty}</div><div>${money(s.total)}</div></div>
       <hr/>
       <div>Total: <strong>${money(s.total)}</strong></div>
       <div>Forma: ${escapeHTML(s.payment)}</div>
@@ -389,17 +360,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return String(str).replace(
       /[&<>"']/g,
       (m) =>
-        ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;",
-        }[m])
+        ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[m]
     );
   }
 
   // ---------- Horário do Ceará ----------
+  // Retorna a data/hora atual em ISO no fuso do Ceará (UTC-3)
   function nowCearaISO() {
     const d = new Date();
     const utc = d.getTime() + d.getTimezoneOffset() * 60000;
@@ -407,6 +373,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return cearaTime.toISOString();
   }
 
+  // Formata uma data ISO para horário do Ceará em formato legível
   function formatDateCeara(iso) {
     const d = new Date(iso);
     return d.toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
