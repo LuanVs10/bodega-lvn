@@ -1,3 +1,7 @@
+/* Bodega LVN - script.js
+   App PWA com LocalStorage para vendas e fiados (corrigido e melhorado).
+*/
+
 const KEY_SALES = "bodega_sales_v1";
 const KEY_FIADOS = "bodega_fiados_v1";
 
@@ -62,11 +66,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return "R$ " + Number(v || 0).toFixed(2).replace(".", ",");
   }
 
-  function nowCearaISO() {
+  function nowLocalISO() {
     const d = new Date();
-    const utc = d.getTime() + d.getTimezoneOffset() * 60000;
-    const cearaTime = new Date(utc - 3 * 60 * 60 * 1000);
-    return cearaTime.toISOString();
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString();
   }
 
   // ---------- Dashboard ----------
@@ -133,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
       total,
       client: client || null,
       payment,
-      date: nowCearaISO(), // hora do Ceará
+      date: nowLocalISO(),
     };
 
     const sales = readSales();
@@ -146,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id: Date.now(),
         client: client || "Cliente sem nome",
         value: total,
-        date: nowCearaISO(), // hora do Ceará
+        date: nowLocalISO(),
         due: null,
         status: "pendente",
       });
@@ -183,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div style="font-weight:600">${escapeHTML(s.product)} ×${s.qty} • ${escapeHTML(
         s.payment
       )}</div>
-          <div class="meta">${formatDateCeara(s.date)} ${
+          <div class="meta">${formatDateLocal(s.date)} ${
         s.client ? "• Cliente: " + escapeHTML(s.client) : ""
       }</div>
         </div>
@@ -234,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
       id: Date.now(),
       client,
       value,
-      date: nowCearaISO(), // hora do Ceará
+      date: nowLocalISO(),
       due,
       status: "pendente",
     });
@@ -261,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div style="font-weight:600">${escapeHTML(f.client)} • ${money(
         f.value
       )}</div>
-          <div class="meta">Compra: ${formatDateCeara(f.date)} ${
+          <div class="meta">Compra: ${formatDateLocal(f.date)} ${
         f.due ? " • Venc: " + f.due : ""
       }</div>
         </div>
@@ -273,56 +276,51 @@ document.addEventListener("DOMContentLoaded", () => {
       if (overdue) div.style.borderLeft = "4px solid var(--danger)";
       fiadoList.appendChild(div);
     });
+
+    // ✅ Marcar como pago
+    window.onMarkPaid = (id) => {
+      if (!confirm("Marcar como pago?")) return;
+
+      const fiados = readFiados();
+      const idx = fiados.findIndex((x) => x.id === id);
+      if (idx === -1) return;
+
+      const pago = fiados[idx];
+      pago.status = "pago";
+      pago.paidAt = nowLocalISO();
+
+      // Move para vendas
+      const sales = readSales();
+      sales.unshift({
+        id: pago.id,
+        product: "Venda fiado quitada",
+        qty: 1,
+        value: pago.value,
+        total: pago.value,
+        client: pago.client,
+        payment: "fiado pago",
+        date: pago.paidAt,
+        pago: true,
+      });
+      writeSales(sales);
+
+      // Remove dos fiados
+      fiados.splice(idx, 1);
+      writeFiados(fiados);
+
+      renderFiados();
+      renderDashboard();
+      showSales(); // mostra nas vendas com destaque verde
+    };
+
+    window.onRemoveFiado = (id) => {
+      if (!confirm("Remover fiado?")) return;
+      const arr = readFiados().filter((x) => x.id !== id);
+      writeFiados(arr);
+      renderFiados();
+      renderDashboard();
+    };
   }
-
-  window.onMarkPaid = (id) => {
-    if (!confirm("Marcar como pago?")) return;
-
-    const fiados = readFiados();
-    const idx = fiados.findIndex((x) => x.id === id);
-    if (idx === -1) return;
-
-    // Marca como pago sem duplicar
-    fiados[idx].status = "pago";
-    fiados[idx].paidAt = nowCearaISO(); // hora do Ceará
-
-    // Alterando a classe para verde (marcando como pago)
-    const fiadoElement = document.querySelector(`[data-id='${id}']`);
-    if (fiadoElement) {
-      fiadoElement.classList.add("pago");
-    }
-
-    // Remove o fiado da lista de fiados
-    fiados.splice(idx, 1);
-    writeFiados(fiados);
-
-    // Apenas atualiza a lista de vendas, sem criar uma nova venda de fiado pago
-    const sales = readSales();
-    sales.unshift({
-      id: fiados[idx].id,
-      product: "Venda fiado quitada",
-      qty: 1,
-      value: fiados[idx].value,
-      total: fiados[idx].value,
-      client: fiados[idx].client,
-      payment: "fiado pago",
-      date: fiados[idx].paidAt,
-      pago: true,
-    });
-    writeSales(sales);
-
-    renderFiados();
-    renderDashboard();
-    showSales(); // mostra nas vendas com destaque verde
-  };
-
-  window.onRemoveFiado = (id) => {
-    if (!confirm("Remover fiado?")) return;
-    const arr = readFiados().filter((x) => x.id !== id);
-    writeFiados(arr);
-    renderFiados();
-    renderDashboard();
-  };
 
   // ---------- Exportação ----------
   function exportCSV() {
@@ -379,7 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .line{display:flex;justify-content:space-between}
       </style></head><body>
       <h2>Bodega LVN</h2>
-      <div class="meta">Venda: ${s.id} • ${formatDateCeara(s.date)}</div>
+      <div class="meta">Venda: ${s.id} • ${formatDateLocal(s.date)}</div>
       <hr/>
       <div class="line"><div>${escapeHTML(
         s.product
@@ -392,18 +390,24 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  function formatDateLocal(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString();
+  }
+
   function escapeHTML(str) {
     if (!str) return "";
     return String(str).replace(
       /[&<>"']/g,
       (m) =>
-        ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[m]
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[m])
     );
-  }
-
-  function formatDateCeara(iso) {
-    const d = new Date(iso);
-    return d.toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
   }
 
   window.generateReceiptHTML = generateReceiptHTML;
