@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
       total,
       client: client || null,
       payment,
-      date: nowCearaISO(), // hora do Ceará
+      date: nowCearaISO(),
     };
 
     const sales = readSales();
@@ -143,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id: Date.now(),
         client: client || "Cliente sem nome",
         value: total,
-        date: nowCearaISO(), // hora do Ceará
+        date: nowCearaISO(),
         due: null,
         status: "pendente",
       });
@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sales.forEach((s) => {
       const div = document.createElement("div");
       div.className = "item";
-      if (s.pago) div.classList.add("pago"); // 💚 pinta verde se foi pago
+      if (s.pago) div.classList.add("pago");
       div.innerHTML = `
         <div>
           <div style="font-weight:600">${escapeHTML(s.product)} ×${s.qty} • ${escapeHTML(
@@ -231,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
       id: Date.now(),
       client,
       value,
-      date: nowCearaISO(), // hora do Ceará
+      date: nowCearaISO(),
       due,
       status: "pendente",
     });
@@ -281,12 +281,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const pago = fiados[idx];
       pago.status = "pago";
-      pago.paidAt = nowCearaISO(); // hora do Ceará
+      pago.paidAt = nowCearaISO();
 
-      // Move para vendas
+      // Move para vendas com novo ID para evitar duplicidade
       const sales = readSales();
       sales.unshift({
-        id: pago.id,
+        id: Date.now(), // novo ID
         product: "Venda fiado quitada",
         qty: 1,
         value: pago.value,
@@ -304,7 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderFiados();
       renderDashboard();
-      showSales(); // mostra nas vendas com destaque verde
+      showSales();
     };
 
     window.onRemoveFiado = (id) => {
@@ -400,15 +400,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------- Horário do Ceará ----------
-  // Retorna a data/hora atual em ISO no fuso do Ceará (UTC-3)
   function nowCearaISO() {
     const d = new Date();
-    const utc = d.getTime() + d.getTimezoneOffset() * 60000; 
-    const cearaTime = new Date(utc - 3 * 60 * 60 * 1000); 
+    const utc = d.getTime() + d.getTimezoneOffset() * 60000;
+    const cearaTime = new Date(utc - 3 * 60 * 60 * 1000);
     return cearaTime.toISOString();
   }
 
-  // Formata uma data ISO para horário do Ceará em formato legível
   function formatDateCeara(iso) {
     const d = new Date(iso);
     return d.toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
