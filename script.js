@@ -1,5 +1,5 @@
 /* Bodega LVN - script.js
-   Simples app PWA com LocalStorage para vendas e fiados.
+   Simples app PWA com LocalStorage para vendas e fiados (corrigido para fuso horário local).
 */
 
 const KEY_SALES = "bodega_sales_v1";
@@ -41,40 +41,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---------- functions ----------
   function readSales(){
-    try {
-      return JSON.parse(localStorage.getItem(KEY_SALES) || "[]");
-    } catch(e){ return [] }
+    try { return JSON.parse(localStorage.getItem(KEY_SALES) || "[]"); }
+    catch(e){ return []; }
   }
   function writeSales(arr){ localStorage.setItem(KEY_SALES, JSON.stringify(arr)); }
 
   function readFiados(){
-    try {
-      return JSON.parse(localStorage.getItem(KEY_FIADOS) || "[]");
-    } catch(e){ return [] }
+    try { return JSON.parse(localStorage.getItem(KEY_FIADOS) || "[]"); }
+    catch(e){ return []; }
   }
   function writeFiados(arr){ localStorage.setItem(KEY_FIADOS, JSON.stringify(arr)); }
 
   function money(v){ return "R$ " + Number(v || 0).toFixed(2).replace(".", ","); }
 
-  function nowISO(){ return new Date().toISOString(); }
-  function onlyDateISO(dt){
-    const d = new Date(dt);
-    return d.toISOString().slice(0,10);
+  // 🕒 Data local (corrigido para fuso horário brasileiro)
+  function nowLocalISO(){
+    const d = new Date();
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString();
   }
 
   function renderDashboard(){
     const sales = readSales();
     const fiados = readFiados();
-    // total today
-    const today = new Date().toISOString().slice(0,10);
-    const totalToday = sales.filter(s => s.date.slice(0,10) === today).reduce((acc,s)=>acc + Number(s.total),0);
+
+    const today = new Date();
+    const date30 = new Date();
+    date30.setDate(date30.getDate() - 30);
+
+    let totalToday = 0;
+    let total30 = 0;
+
+    sales.forEach(s => {
+      const dataVenda = new Date(s.date);
+
+      const mesmaData =
+        dataVenda.getDate() === today.getDate() &&
+        dataVenda.getMonth() === today.getMonth() &&
+        dataVenda.getFullYear() === today.getFullYear();
+
+      if (mesmaData) totalToday += Number(s.total);
+      if (dataVenda >= date30) total30 += Number(s.total);
+    });
+
     document.getElementById("totalToday").textContent = money(totalToday);
-    // total fiado
-    const totalFiado = fiados.reduce((a,f)=>a + Number(f.value),0);
-    document.getElementById("totalFiado").textContent = money(totalFiado);
-    // total last 30 days
-    const date30 = new Date(); date30.setDate(date30.getDate() - 30);
-    const total30 = sales.filter(s => new Date(s.date) >= date30).reduce((a,s)=>a + Number(s.total),0);
+    document.getElementById("totalFiado").textContent = money(fiados.reduce((a,f)=>a + Number(f.value),0));
     document.getElementById("total30").textContent = money(total30);
   }
 
@@ -104,21 +115,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const sale = {
       id: Date.now(),
       product, value, qty, total, client: client || null, payment,
-      date: nowISO()
+      date: nowLocalISO() // 🕒 corrigido aqui!
     };
 
     const sales = readSales();
     sales.unshift(sale);
     writeSales(sales);
 
-    // if fiado - register in fiados
     if(payment === "fiado"){
       const fiados = readFiados();
       fiados.unshift({
         id: Date.now(),
         client: client || "Cliente sem nome",
         value: total,
-        date: nowISO(),
+        date: nowLocalISO(),
         due: null,
         status: "pendente"
       });
@@ -162,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
       listContent.appendChild(div);
     });
 
-    // attach global helper buttons via window
+    // actions
     window.onDeleteSale = (id) => {
       if(!confirm("Excluir venda?")) return;
       const arr = readSales().filter(x => x.id !== id);
@@ -174,7 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.onReprint = (id) => {
       const sale = readSales().find(x=>x.id===id);
       if(!sale) return alert("Venda não encontrada.");
-      // simple print
       const html = generateReceiptHTML(sale);
       const w = window.open("","_blank","width=400,height=600");
       w.document.write(html);
@@ -197,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const value = Number(document.getElementById("fiadoValue").value) || 0;
     const due = document.getElementById("fiadoDue").value || null;
     const fiados = readFiados();
-    fiados.unshift({ id: Date.now(), client, value, date: nowISO(), due, status: "pendente" });
+    fiados.unshift({ id: Date.now(), client, value, date: nowLocalISO(), due, status: "pendente" });
     writeFiados(fiados);
     fiadoForm.reset();
     renderFiados();
@@ -228,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.onMarkPaid = (id) => {
       if(!confirm("Marcar como pago?")) return;
-      const arr = readFiados().map(x => x.id === id ? {...x, status:"pago", paidAt: nowISO()} : x);
+      const arr = readFiados().map(x => x.id === id ? {...x, status:"pago", paidAt: nowLocalISO()} : x);
       writeFiados(arr);
       renderFiados();
       renderDashboard();
@@ -279,12 +288,6 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  // small helpers
-  window.formatDateLocal = (iso) => {
-    const d = new Date(iso);
-    return d.toLocaleString();
-  };
-
   function formatDateLocal(iso){
     const d = new Date(iso);
     return d.toLocaleString();
@@ -292,7 +295,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function escapeHTML(str){ if(!str) return ""; return String(str).replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
 
-  // initial global exposure (for onReprint to call)
   window.generateReceiptHTML = generateReceiptHTML;
-
 });
