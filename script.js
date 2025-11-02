@@ -34,6 +34,11 @@ document.addEventListener("DOMContentLoaded", () => {
   renderDashboard();
   showSales();
 
+  // Service worker registration
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+  }
+
   // ---------- Funções utilitárias ----------
   function readSales() {
     try {
@@ -266,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fiadoList.appendChild(div);
     });
 
-    // ✅ Marcar como pago (sem duplicar)
+    // ✅ Marcar como pago
     window.onMarkPaid = (id) => {
       if (!confirm("Marcar como pago?")) return;
 
@@ -284,10 +289,28 @@ document.addEventListener("DOMContentLoaded", () => {
         fiadoElement.classList.add("pago");
       }
 
+      // Move para vendas
+      const sales = readSales();
+      sales.unshift({
+        id: fiados[idx].id,
+        product: "Venda fiado quitada",
+        qty: 1,
+        value: fiados[idx].value,
+        total: fiados[idx].value,
+        client: fiados[idx].client,
+        payment: "fiado pago",
+        date: fiados[idx].paidAt,
+        pago: true,
+      });
+      writeSales(sales);
+
+      // Remove dos fiados
+      fiados.splice(idx, 1);
       writeFiados(fiados);
 
       renderFiados();
       renderDashboard();
+      showSales(); // mostra nas vendas com destaque verde
     };
 
     window.onRemoveFiado = (id) => {
@@ -316,7 +339,16 @@ document.addEventListener("DOMContentLoaded", () => {
       ],
     ];
     sales.forEach((s) => {
-      rows.push([s.id, s.product, s.value, s.qty, s.total, s.client || "", s.payment, s.date]);
+      rows.push([
+        s.id,
+        s.product,
+        s.value,
+        s.qty,
+        s.total,
+        s.client || "",
+        s.payment,
+        s.date,
+      ]);
     });
     const csv = rows
       .map((r) =>
@@ -347,7 +379,9 @@ document.addEventListener("DOMContentLoaded", () => {
       <h2>Bodega LVN</h2>
       <div class="meta">Venda: ${s.id} • ${formatDateCeara(s.date)}</div>
       <hr/>
-      <div class="line"><div>${escapeHTML(s.product)} x${s.qty}</div><div>${money(s.total)}</div></div>
+      <div class="line"><div>${escapeHTML(
+        s.product
+      )} x${s.qty}</div><div>${money(s.total)}</div></div>
       <hr/>
       <div>Total: <strong>${money(s.total)}</strong></div>
       <div>Forma: ${escapeHTML(s.payment)}</div>
@@ -361,7 +395,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return String(str).replace(
       /[&<>"']/g,
       (m) =>
-        ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[m]
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[m])
     );
   }
 
