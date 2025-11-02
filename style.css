@@ -79,3 +79,11 @@ form input[type="text"], form input[type="number"], form input[type="date"]{
 .small-btn.danger{border-color:rgba(255,100,100,0.12);color:var(--danger)}
 
 .app-footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+
+/* Itens pagos aparecem em verde */
+.item.pago {
+  background-color: rgba(0, 255, 100, 0.12);
+  border: 1px solid rgba(0, 255, 100, 0.3);
+  color: #9ef7b4;
+  transition: 0.3s;
+}
