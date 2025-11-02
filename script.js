@@ -1,7 +1,3 @@
-/* Bodega LVN - script.js
-   App PWA com LocalStorage para vendas e fiados (corrigido e melhorado).
-*/
-
 const KEY_SALES = "bodega_sales_v1";
 const KEY_FIADOS = "bodega_fiados_v1";
 
@@ -64,6 +60,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function money(v) {
     return "R$ " + Number(v || 0).toFixed(2).replace(".", ",");
+  }
+
+  function nowCearaISO() {
+    const d = new Date();
+    const utc = d.getTime() + d.getTimezoneOffset() * 60000;
+    const cearaTime = new Date(utc - 3 * 60 * 60 * 1000);
+    return cearaTime.toISOString();
   }
 
   // ---------- Dashboard ----------
@@ -270,57 +273,56 @@ document.addEventListener("DOMContentLoaded", () => {
       if (overdue) div.style.borderLeft = "4px solid var(--danger)";
       fiadoList.appendChild(div);
     });
-
-    // ✅ Marcar como pago
-    window.onMarkPaid = (id) => {
-      if (!confirm("Marcar como pago?")) return;
-
-      const fiados = readFiados();
-      const idx = fiados.findIndex((x) => x.id === id);
-      if (idx === -1) return;
-
-      // Marca como pago sem duplicar
-      fiados[idx].status = "pago";
-      fiados[idx].paidAt = nowCearaISO(); // hora do Ceará
-
-      // Alterando a classe para verde (marcando como pago)
-      const fiadoElement = document.querySelector(`[data-id='${id}']`);
-      if (fiadoElement) {
-        fiadoElement.classList.add("pago");
-      }
-
-      // Move para vendas
-      const sales = readSales();
-      sales.unshift({
-        id: fiados[idx].id,
-        product: "Venda fiado quitada",
-        qty: 1,
-        value: fiados[idx].value,
-        total: fiados[idx].value,
-        client: fiados[idx].client,
-        payment: "fiado pago",
-        date: fiados[idx].paidAt,
-        pago: true,
-      });
-      writeSales(sales);
-
-      // Remove dos fiados
-      fiados.splice(idx, 1);
-      writeFiados(fiados);
-
-      renderFiados();
-      renderDashboard();
-      showSales(); // mostra nas vendas com destaque verde
-    };
-
-    window.onRemoveFiado = (id) => {
-      if (!confirm("Remover fiado?")) return;
-      const arr = readFiados().filter((x) => x.id !== id);
-      writeFiados(arr);
-      renderFiados();
-      renderDashboard();
-    };
   }
+
+  window.onMarkPaid = (id) => {
+    if (!confirm("Marcar como pago?")) return;
+
+    const fiados = readFiados();
+    const idx = fiados.findIndex((x) => x.id === id);
+    if (idx === -1) return;
+
+    // Marca como pago sem duplicar
+    fiados[idx].status = "pago";
+    fiados[idx].paidAt = nowCearaISO(); // hora do Ceará
+
+    // Alterando a classe para verde (marcando como pago)
+    const fiadoElement = document.querySelector(`[data-id='${id}']`);
+    if (fiadoElement) {
+      fiadoElement.classList.add("pago");
+    }
+
+    // Remove o fiado da lista de fiados
+    fiados.splice(idx, 1);
+    writeFiados(fiados);
+
+    // Apenas atualiza a lista de vendas, sem criar uma nova venda de fiado pago
+    const sales = readSales();
+    sales.unshift({
+      id: fiados[idx].id,
+      product: "Venda fiado quitada",
+      qty: 1,
+      value: fiados[idx].value,
+      total: fiados[idx].value,
+      client: fiados[idx].client,
+      payment: "fiado pago",
+      date: fiados[idx].paidAt,
+      pago: true,
+    });
+    writeSales(sales);
+
+    renderFiados();
+    renderDashboard();
+    showSales(); // mostra nas vendas com destaque verde
+  };
+
+  window.onRemoveFiado = (id) => {
+    if (!confirm("Remover fiado?")) return;
+    const arr = readFiados().filter((x) => x.id !== id);
+    writeFiados(arr);
+    renderFiados();
+    renderDashboard();
+  };
 
   // ---------- Exportação ----------
   function exportCSV() {
@@ -395,26 +397,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return String(str).replace(
       /[&<>"']/g,
       (m) =>
-        ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;",
-        }[m])
+        ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[m]
     );
   }
 
-  // ---------- Horário do Ceará ----------
-  // Retorna a data/hora atual em ISO no fuso do Ceará (UTC-3)
-  function nowCearaISO() {
-    const d = new Date();
-    const utc = d.getTime() + d.getTimezoneOffset() * 60000;
-    const cearaTime = new Date(utc - 3 * 60 * 60 * 1000);
-    return cearaTime.toISOString();
-  }
-
-  // Formata uma data ISO para horário do Ceará em formato legível
   function formatDateCeara(iso) {
     const d = new Date(iso);
     return d.toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
