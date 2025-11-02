@@ -34,11 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderDashboard();
   showSales();
 
-  // Service worker registration
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-  }
-
   // ---------- Funções utilitárias ----------
   function readSales() {
     try {
@@ -279,9 +274,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const idx = fiados.findIndex((x) => x.id === id);
       if (idx === -1) return;
 
-      // Apenas marca como pago
+      // Marca como pago sem duplicar
       fiados[idx].status = "pago";
       fiados[idx].paidAt = nowCearaISO(); // hora do Ceará
+
+      // Alterando a classe para verde (marcando como pago)
+      const fiadoElement = document.querySelector(`[data-id='${id}']`);
+      if (fiadoElement) {
+        fiadoElement.classList.add("pago");
+      }
 
       writeFiados(fiados);
 
